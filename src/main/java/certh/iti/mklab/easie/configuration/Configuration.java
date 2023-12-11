@@ -15,6 +15,12 @@
  */
 package certh.iti.mklab.easie.configuration;
 
+import certh.iti.mklab.easie.executor.handlers.ExtractionHandler;
+import certh.iti.mklab.easie.extractors.dynamicpages.DynamicHTMLExtractor;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -48,6 +54,34 @@ public final class Configuration {
     public Store store;
 
     public Configuration crawl;
+
+    public void executeEvents(DynamicHTMLExtractor wrapper) throws InterruptedException, URISyntaxException, IOException, KeyManagementException {
+        if (this.events instanceof ArrayList) {
+            for (Configuration.Event event: (ArrayList<Configuration.Event>) this.events) {
+                this.executeEvent(wrapper, event);
+            }
+        } else {
+            Configuration.Event event = (Configuration.Event) this.events;
+            System.out.println(event.extraction_type);
+            this.executeEvent(wrapper, event);
+        }
+    }
+
+    private void executeEvent(DynamicHTMLExtractor wrapper, Configuration.Event event) throws InterruptedException, URISyntaxException, IOException, KeyManagementException {
+
+        ExtractionHandler extractionHandler = new ExtractionHandler();
+
+        if (event.equals("CLICK")) {
+            for (int j = 0; j < event.times_to_repeat; j++) {
+                wrapper.setClickEvent(event.selector);
+            }
+        } else if (event.equals("SCROLL_DOWN")) {
+            for (int j = 0; j < event.times_to_repeat; j++) {
+                wrapper.setScrollEvent();
+            }
+            extractionHandler.execute(wrapper, this);
+        }
+    }
 
     public void setEvents(ArrayList<Event> events) {
         this.events = events;

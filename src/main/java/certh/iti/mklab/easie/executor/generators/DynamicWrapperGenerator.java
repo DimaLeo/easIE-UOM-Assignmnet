@@ -17,7 +17,6 @@ package certh.iti.mklab.easie.executor.generators;
 
 import certh.iti.mklab.easie.configuration.Configuration;
 import certh.iti.mklab.easie.exception.RelativeURLException;
-import certh.iti.mklab.easie.executor.handlers.EventHandler;
 import certh.iti.mklab.easie.extractors.dynamicpages.DynamicHTMLExtractor;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -32,13 +31,10 @@ import java.util.Iterator;
 public class DynamicWrapperGenerator extends WrapperGenerator {
 
     private String ChromeDriverPath;
-    private final EventHandler eventHandler;
 
     public DynamicWrapperGenerator(Configuration configuration, String ChromeDriverPath) {
         super(configuration);
         this.ChromeDriverPath = ChromeDriverPath;
-
-        this.eventHandler = EventHandler.getInstance();
     }
 
     @Override
@@ -51,7 +47,7 @@ public class DynamicWrapperGenerator extends WrapperGenerator {
                     ChromeDriverPath
             );
             if (configuration.events != null) {
-                eventHandler.executeEvents(configuration, wrapper);
+                configuration.executeEvents(wrapper);
             } else {
                 extraction_handler.execute(wrapper, configuration);
             }
@@ -71,7 +67,7 @@ public class DynamicWrapperGenerator extends WrapperGenerator {
                 );
 
                 if (configuration.events != null) {
-                    eventHandler.executeEvents(configuration, wrapper);
+                    configuration.executeEvents(wrapper);
                 } else {
                     extraction_handler.execute(wrapper, configuration);
                 }
