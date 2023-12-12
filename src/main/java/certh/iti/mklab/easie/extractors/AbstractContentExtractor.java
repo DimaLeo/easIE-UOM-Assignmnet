@@ -53,83 +53,51 @@ public abstract class AbstractContentExtractor {
     protected Document getSelectedElement(ScrapableField field, Object e) throws PostProcessingException {
         Element element = (Element) e;
 
-        String field_name;
-        Object field_value;
-        Integer field_citeyear;
+        String fieldName;
+        Object fieldValue;
+        Integer fieldCiteyear;
 
         if (field.label instanceof String) {
-            field_name = (String) field.label;
+            fieldName = (String) field.label;
         } else {
-            field_name = extractContent((ExtractionProperties) field.label, element).toString();
+            fieldName = extractContent((ExtractionProperties) field.label, element).toString();
         }
 
-        try {
-            if (field.citeyear instanceof Double) {
-                field_citeyear = ((Double) field.citeyear).intValue();
-            } else {
-                try {
-                    field_citeyear = (Integer) Integer.parseInt((String) extractContent((ExtractionProperties) field.citeyear, element));
-                } catch (NumberFormatException ex) {
-                    field_citeyear = null;
-                }
-                if (field_citeyear == null) {
-                    field_citeyear = Calendar.getInstance().get(Calendar.YEAR);
-                }
-            }
-        } catch (NullPointerException ex) {
-            field_citeyear = Calendar.getInstance().get(Calendar.YEAR);
-
-        }
+        fieldCiteyear = getFieldCityYearValue(field, element);
 
         Document extracted_content = new Document();
         extracted_content
-                .append("name", field_name)
-                .append("citeyear", field_citeyear);
-        if (field.value instanceof String) {
-            field_value = (String) field.value;
+                .append("name", fieldName)
+                .append("citeyear", fieldCiteyear);
 
-            if (field_value.toString().trim().equals("0") || field_value.toString().trim().toLowerCase().equals("false") || field_value.toString().trim().toLowerCase().equals("no")) {
-                extracted_content.append("value", false);
-                extracted_content.append("type", "boolean");
-            } else if (field_value.toString().trim().equals("1") || field_value.toString().trim().toLowerCase().equals("true") || field_value.toString().trim().toLowerCase().equals("yes")) {
-                extracted_content.append("value", true);
-                extracted_content.append("type", "boolean");
-            } else if (field_value.toString().replaceAll("[0-9\\.,]", "").trim().equals("")) {
-                try {
-                    field_value = Double.parseDouble(field_value.toString().replaceAll("[^0-9\\.]", "").trim());
-                } catch (NumberFormatException nfe) {
-                    field_value = null;
-                }
-                extracted_content.append("type", "numerical");
-            } else {
-                extracted_content.append("value", field_value).append("type", "textual");
-            }
+        if (field.value instanceof String) {
+            convertFieldToExtractedContent(field, extracted_content);
         } else {
-            field_value = extractContent((ExtractionProperties) field.value, element);
+            fieldValue = extractContent((ExtractionProperties) field.value, element);
 
             ExtractionProperties properties = (ExtractionProperties) field.value;
 
             if (properties.type.equals("text")) {
                 extracted_content.append("type", "textual");
-                extracted_content.append("value", field_value);
+                extracted_content.append("value", fieldValue);
             } else if (properties.type.equals("numerical")) {
-                String extracted_field_value = field_value.toString().toLowerCase();
+                String extracted_field_value = fieldValue.toString().toLowerCase();
                 try {
-                    field_value = Double.parseDouble(extracted_field_value.replaceAll("[^0-9\\.]", "").trim());
+                    fieldValue = Double.parseDouble(extracted_field_value.replaceAll("[^0-9\\.]", "").trim());
                     if (extracted_field_value.contains("million")) {
                         extracted_field_value = extracted_field_value.replaceAll("millions of", "");                        
                         extracted_field_value = extracted_field_value.replaceAll("millions", "");
                         extracted_field_value = extracted_field_value.replaceAll("million", "");
                        
-                        field_value = ((Double) field_value) * 1000000;
+                        fieldValue = ((Double) fieldValue) * 1000000;
                     } else if (extracted_field_value.contains("billion")) {
                         extracted_field_value = extracted_field_value.replaceAll("billions of", "");
                         extracted_field_value = extracted_field_value.replaceAll("billions", "");
                         extracted_field_value = extracted_field_value.replaceAll("billion", "");
-                        field_value = ((Double) field_value) * 1000000000;
+                        fieldValue = ((Double) fieldValue) * 1000000000;
                     }
                 } catch (NumberFormatException nfe) {
-                    field_value = null;
+                    fieldValue = null;
                 }
                 String units = "";
                 try {
@@ -137,34 +105,106 @@ public abstract class AbstractContentExtractor {
                 } catch (NullPointerException ex) {
                     System.out.println(ex.getMessage());
                 }
-                extracted_content.append("value", field_value);
+                extracted_content.append("value", fieldValue);
                 extracted_content.append("type", "numerical");
                 if (!units.equals("")) {
                     extracted_content.append("units", units);
                 }
             } else if (properties.type.equals("boolean")) {
-                if (field_value.toString().trim().equals("0") || field_value.toString().trim().toLowerCase().equals("false") || field_value.toString().trim().toLowerCase().equals("no")) {
+                if (fieldValue.toString().trim().equals("0") || fieldValue.toString().trim().toLowerCase().equals("false") || fieldValue.toString().trim().toLowerCase().equals("no")) {
                     extracted_content.append("value", false);
                     extracted_content.append("type", "boolean");
-                } else if (field_value.toString().trim().equals("1") || field_value.toString().trim().toLowerCase().equals("true") || field_value.toString().trim().toLowerCase().equals("yes")) {
+                } else if (fieldValue.toString().trim().equals("1") || fieldValue.toString().trim().toLowerCase().equals("true") || fieldValue.toString().trim().toLowerCase().equals("yes")) {
                     extracted_content.append("value", true);
                     extracted_content.append("type", "boolean");
                 } else {
                     extracted_content.append("type", "categorical");
-                    extracted_content.append("value", field_value);
+                    extracted_content.append("value", fieldValue);
                 }
             } else if (properties.type.equals("categorical")) {
                 extracted_content.append("type", "categorical");
-                extracted_content.append("value", field_value);
+                extracted_content.append("value", fieldValue);
             } else if (properties.type.equals("link") || properties.type.equals("src")) {
                 extracted_content.append("type", "link");
-                extracted_content.append("value", field_value);
+                extracted_content.append("value", fieldValue);
             } else {
                 extracted_content.append("type", "other");
-                extracted_content.append("value", field_value);
+                extracted_content.append("value", fieldValue);
             }
         }
         return extracted_content;
+    }
+
+    private static void convertFieldToExtractedContent(ScrapableField field, Document extractedContent) {
+        Object fieldValue = field.value;
+
+        if (isFalseValue(fieldValue)) {
+            handleBooleanContent(extractedContent, false);
+        } else if (isTrueValue(fieldValue)) {
+            handleBooleanContent(extractedContent, true);
+        } else if (isNumericalValue(fieldValue)) {
+            handleNumericalContent(extractedContent, fieldValue);
+        } else {
+            handleTextualContent(extractedContent, fieldValue);
+        }
+    }
+
+    private static boolean isFalseValue(Object fieldValue) {
+        String trimmedValue = fieldValue.toString().trim().toLowerCase();
+        return trimmedValue.equals("0") || trimmedValue.equals("false") || trimmedValue.equals("no");
+    }
+
+    private static boolean isTrueValue(Object fieldValue) {
+        String trimmedValue = fieldValue.toString().trim().toLowerCase();
+        return trimmedValue.equals("1") || trimmedValue.equals("true") || trimmedValue.equals("yes");
+    }
+
+    private static boolean isNumericalValue(Object fieldValue) {
+        String cleanedValue = fieldValue.toString().replaceAll("[0-9\\.,]", "").trim();
+        return cleanedValue.equals("") && isNumeric(fieldValue.toString());
+    }
+
+    private static void handleBooleanContent(Document extractedContent, boolean value) {
+        extractedContent.append("value", value).append("type", "boolean");
+    }
+
+    private static void handleNumericalContent(Document extractedContent, Object fieldValue) {
+        try {
+            double numericalValue = Double.parseDouble(fieldValue.toString().replaceAll("[^0-9\\.]", "").trim());
+            extractedContent.append("value", numericalValue).append("type", "numerical");
+        } catch (NumberFormatException nfe) {
+            // Handle the case where parsing to double fails
+            extractedContent.append("value", null).append("type", "numerical");
+        }
+    }
+
+    private static void handleTextualContent(Document extractedContent, Object fieldValue) {
+        extractedContent.append("value", fieldValue).append("type", "textual");
+    }
+
+    private static boolean isNumeric(String str) {
+        try {
+            Double.parseDouble(str);
+            return true;
+        } catch (NumberFormatException nfe) {
+            return false;
+        }
+    }
+
+    private Integer getFieldCityYearValue(ScrapableField field, Element element) {
+        Integer fieldCiteyear;
+
+        try {
+            if (field.citeyear instanceof Double) {
+                fieldCiteyear = ((Double) field.citeyear).intValue();
+            } else {
+                fieldCiteyear = Integer.parseInt((String) extractContent((ExtractionProperties) field.citeyear, element));
+            }
+        } catch (Exception ex) {
+            fieldCiteyear = Calendar.getInstance().get(Calendar.YEAR);
+
+        }
+        return fieldCiteyear;
     }
 
     protected Object extractContent(ExtractionProperties extraction_properties, Element element) throws PostProcessingException {
