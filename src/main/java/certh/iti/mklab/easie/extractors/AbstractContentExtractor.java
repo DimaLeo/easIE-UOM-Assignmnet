@@ -88,7 +88,7 @@ public abstract class AbstractContentExtractor {
                 handleNumericalContent(extractedContent, fieldValue);
                 break;
             case "boolean":
-                handleBooleanContent(extractedContent,(Boolean) fieldValue);
+                extractedContent.append("type", "boolean").append("value", getBooleanValue(fieldValue));
                 break;
             case "categorical":
                 extractedContent.append("type", "categorical").append("value", fieldValue);
@@ -114,34 +114,31 @@ public abstract class AbstractContentExtractor {
     }
 
     private static void convertFieldToExtractedContent(Object fieldValue, Document extractedContent) {
-        if (isFalseValue(fieldValue)) {
-            handleBooleanContent(extractedContent, false);
-        } else if (isTrueValue(fieldValue)) {
-            handleBooleanContent(extractedContent, true);
+        if (Boolean.TRUE.equals(getBooleanValue(fieldValue))) {
+            extractedContent.append("type", "boolean").append("value", true);
+        } else if (Boolean.FALSE.equals(getBooleanValue(fieldValue))) {
+            extractedContent.append("type", "boolean").append("value", false);
         } else if (isNumericalValue(fieldValue)) {
             handleNumericalContent(extractedContent, fieldValue);
         } else {
-            handleTextualContent(extractedContent, fieldValue);
+            extractedContent.append("type", "textual").append("value", fieldValue);
         }
     }
 
-    private static boolean isFalseValue(Object fieldValue) {
+    private static Boolean getBooleanValue(Object fieldValue) {
         String trimmedValue = fieldValue.toString().trim().toLowerCase();
-        return trimmedValue.equals("0") || trimmedValue.equals("false") || trimmedValue.equals("no");
-    }
-
-    private static boolean isTrueValue(Object fieldValue) {
-        String trimmedValue = fieldValue.toString().trim().toLowerCase();
-        return trimmedValue.equals("1") || trimmedValue.equals("true") || trimmedValue.equals("yes");
+        if(trimmedValue.equals("0") || trimmedValue.equals("false") || trimmedValue.equals("no")) {
+            return false;
+        }
+        else if(trimmedValue.equals("1") || trimmedValue.equals("true") || trimmedValue.equals("yes")){
+            return true;
+        }
+        return null;
     }
 
     private static boolean isNumericalValue(Object fieldValue) {
         String cleanedValue = fieldValue.toString().replaceAll("[0-9\\.,]", "").trim();
         return cleanedValue.equals("") && isNumeric(fieldValue.toString());
-    }
-
-    private static void handleBooleanContent(Document extractedContent, boolean value) {
-        extractedContent.append("value", value).append("type", "boolean");
     }
 
     private static void handleNumericalContent(Document extractedContent, Object fieldValue) {
@@ -152,10 +149,6 @@ public abstract class AbstractContentExtractor {
             // Handle the case where parsing to double fails
             extractedContent.append("value", null).append("type", "numerical");
         }
-    }
-
-    private static void handleTextualContent(Document extractedContent, Object fieldValue) {
-        extractedContent.append("value", fieldValue).append("type", "textual");
     }
 
     private static boolean isNumeric(String str) {
