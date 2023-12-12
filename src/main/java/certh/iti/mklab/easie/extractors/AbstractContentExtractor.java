@@ -37,7 +37,7 @@ public abstract class AbstractContentExtractor {
     protected Element document;
     protected String source;
 
-    abstract protected List run(List<ScrapableField> fields, FIELD_TYPE type) throws HTMLElementNotFoundException;
+    protected abstract List run(List<ScrapableField> fields, FIELD_TYPE type) throws HTMLElementNotFoundException;
 
     public List getExtractedFields(List<ScrapableField> fields, FIELD_TYPE type) throws HTMLElementNotFoundException {
         return run(fields, type);
@@ -54,90 +54,66 @@ public abstract class AbstractContentExtractor {
         Element element = (Element) e;
 
         String fieldName;
-        Object fieldValue;
         Integer fieldCiteyear;
 
+        fieldName = extractFieldName(field, element);
+        fieldCiteyear = getFieldCityYearValue(field, element);
+
+        Document extractedContent = new Document();
+        extractedContent
+                .append("name", fieldName)
+                .append("citeyear", fieldCiteyear);
+
+        processFieldValue(field.value, extractedContent);
+
+        return extractedContent;
+    }
+
+    private static void processFieldValue(Object fieldValue, Document extractedContent) {
+        if (fieldValue instanceof String) {
+            convertFieldToExtractedContent(fieldValue, extractedContent);
+        } else {
+            handleNonStringContent(fieldValue, extractedContent);
+        }
+    }
+
+    private static void handleNonStringContent(Object fieldValue, Document extractedContent) {
+        ExtractionProperties properties = (ExtractionProperties) fieldValue;
+
+        switch (properties.type) {
+            case "text":
+                extractedContent.append("type", "textual").append("value", fieldValue);
+                break;
+            case "numerical":
+                handleNumericalContent(extractedContent, fieldValue);
+                break;
+            case "boolean":
+                handleBooleanContent(extractedContent,(Boolean) fieldValue);
+                break;
+            case "categorical":
+                extractedContent.append("type", "categorical").append("value", fieldValue);
+                break;
+            case "link":
+            case "src":
+                extractedContent.append("type", "link").append("value", fieldValue);
+                break;
+            default:
+                extractedContent.append("type", "other").append("value", fieldValue);
+                break;
+        }
+    }
+
+    private String extractFieldName(ScrapableField field, Element element) throws PostProcessingException {
+        String fieldName;
         if (field.label instanceof String) {
             fieldName = (String) field.label;
         } else {
             fieldName = extractContent((ExtractionProperties) field.label, element).toString();
         }
-
-        fieldCiteyear = getFieldCityYearValue(field, element);
-
-        Document extracted_content = new Document();
-        extracted_content
-                .append("name", fieldName)
-                .append("citeyear", fieldCiteyear);
-
-        if (field.value instanceof String) {
-            convertFieldToExtractedContent(field, extracted_content);
-        } else {
-            fieldValue = extractContent((ExtractionProperties) field.value, element);
-
-            ExtractionProperties properties = (ExtractionProperties) field.value;
-
-            if (properties.type.equals("text")) {
-                extracted_content.append("type", "textual");
-                extracted_content.append("value", fieldValue);
-            } else if (properties.type.equals("numerical")) {
-                String extracted_field_value = fieldValue.toString().toLowerCase();
-                try {
-                    fieldValue = Double.parseDouble(extracted_field_value.replaceAll("[^0-9\\.]", "").trim());
-                    if (extracted_field_value.contains("million")) {
-                        extracted_field_value = extracted_field_value.replaceAll("millions of", "");                        
-                        extracted_field_value = extracted_field_value.replaceAll("millions", "");
-                        extracted_field_value = extracted_field_value.replaceAll("million", "");
-                       
-                        fieldValue = ((Double) fieldValue) * 1000000;
-                    } else if (extracted_field_value.contains("billion")) {
-                        extracted_field_value = extracted_field_value.replaceAll("billions of", "");
-                        extracted_field_value = extracted_field_value.replaceAll("billions", "");
-                        extracted_field_value = extracted_field_value.replaceAll("billion", "");
-                        fieldValue = ((Double) fieldValue) * 1000000000;
-                    }
-                } catch (NumberFormatException nfe) {
-                    fieldValue = null;
-                }
-                String units = "";
-                try {
-                    units = extracted_field_value.replaceAll("[0-9\\.,]", "").trim();
-                } catch (NullPointerException ex) {
-                    System.out.println(ex.getMessage());
-                }
-                extracted_content.append("value", fieldValue);
-                extracted_content.append("type", "numerical");
-                if (!units.equals("")) {
-                    extracted_content.append("units", units);
-                }
-            } else if (properties.type.equals("boolean")) {
-                if (fieldValue.toString().trim().equals("0") || fieldValue.toString().trim().toLowerCase().equals("false") || fieldValue.toString().trim().toLowerCase().equals("no")) {
-                    extracted_content.append("value", false);
-                    extracted_content.append("type", "boolean");
-                } else if (fieldValue.toString().trim().equals("1") || fieldValue.toString().trim().toLowerCase().equals("true") || fieldValue.toString().trim().toLowerCase().equals("yes")) {
-                    extracted_content.append("value", true);
-                    extracted_content.append("type", "boolean");
-                } else {
-                    extracted_content.append("type", "categorical");
-                    extracted_content.append("value", fieldValue);
-                }
-            } else if (properties.type.equals("categorical")) {
-                extracted_content.append("type", "categorical");
-                extracted_content.append("value", fieldValue);
-            } else if (properties.type.equals("link") || properties.type.equals("src")) {
-                extracted_content.append("type", "link");
-                extracted_content.append("value", fieldValue);
-            } else {
-                extracted_content.append("type", "other");
-                extracted_content.append("value", fieldValue);
-            }
-        }
-        return extracted_content;
+        return fieldName;
     }
 
-    private static void convertFieldToExtractedContent(ScrapableField field, Document extractedContent) {
-        Object fieldValue = field.value;
-
+    private static void convertFieldToExtractedContent(Object fieldValue, Document extractedContent) {
         if (isFalseValue(fieldValue)) {
             handleBooleanContent(extractedContent, false);
         } else if (isTrueValue(fieldValue)) {
@@ -207,48 +183,48 @@ public abstract class AbstractContentExtractor {
         return fieldCiteyear;
     }
 
-    protected Object extractContent(ExtractionProperties extraction_properties, Element element) throws PostProcessingException {
-        Object extracted_content;
+    protected Object extractContent(ExtractionProperties extractionProperties, Element element) throws PostProcessingException {
+        Object extractedContent;
 
-        if (extraction_properties.type.equals("text") || extraction_properties.type.equals("numerical") || extraction_properties.type.equals("boolean") || extraction_properties.type.equals("categorical")) {
-            extracted_content = element.select(extraction_properties.selector).text();
-        } else if (extraction_properties.type.equals("link")) {
-            extracted_content = element.select(extraction_properties.selector).attr("href");
-            if (extracted_content.equals("")) {
-                extracted_content = element.select(extraction_properties.selector).attr("data-tab-content");
-                if (!extracted_content.equals("")) {
-                    extracted_content = source + "#" + extracted_content;
+        if (extractionProperties.type.equals("text") || extractionProperties.type.equals("numerical") || extractionProperties.type.equals("boolean") || extractionProperties.type.equals("categorical")) {
+            extractedContent = element.select(extractionProperties.selector).text();
+        } else if (extractionProperties.type.equals("link")) {
+            extractedContent = element.select(extractionProperties.selector).attr("href");
+            if (extractedContent.equals("")) {
+                extractedContent = element.select(extractionProperties.selector).attr("data-tab-content");
+                if (!extractedContent.equals("")) {
+                    extractedContent = source + "#" + extractedContent;
                 }
             }
-        } else if (extraction_properties.type.equals("image")) {
-            extracted_content = element.select(extraction_properties.selector).attr("src");
-        } else if (extraction_properties.type.equals("html")) {
-            extracted_content = element.select(extraction_properties.selector).html();
-        } else if (extraction_properties.type.equals("list")) {
-            extracted_content = extractList(element, extraction_properties.selector);
+        } else if (extractionProperties.type.equals("image")) {
+            extractedContent = element.select(extractionProperties.selector).attr("src");
+        } else if (extractionProperties.type.equals("html")) {
+            extractedContent = element.select(extractionProperties.selector).html();
+        } else if (extractionProperties.type.equals("list")) {
+            extractedContent = extractList(element, extractionProperties.selector);
         } else {
-            extracted_content = element.select(extraction_properties.selector).attr(extraction_properties.type);
+            extractedContent = element.select(extractionProperties.selector).attr(extractionProperties.type);
         }
 
-        if (extracted_content.equals("")) {
-            System.out.println("WARNING: No content found in the specified element:|" + element.cssSelector() + " " + extraction_properties.selector + "| Please check the correction of the defined extraction rule or for possible changes in the source!");
+        if (extractedContent.equals("")) {
+            System.out.println("WARNING: No content found in the specified element:|" + element.cssSelector() + " " + extractionProperties.selector + "| Please check the correction of the defined extraction rule or for possible changes in the source!");
         }
-        if (extracted_content instanceof String && extraction_properties.replace != null) {
-            extracted_content = processContent(
-                    (String) extracted_content,
-                    extraction_properties.replace
+        if (extractedContent instanceof String && extractionProperties.replace != null) {
+            extractedContent = processContent(
+                    (String) extractedContent,
+                    extractionProperties.replace
             );
         }
 
-        return extracted_content;
+        return extractedContent;
     }
 
-    protected String processContent(String content, ReplaceField replace_properties) throws PostProcessingException {
-        if (replace_properties.regex.size() == replace_properties.with.size()) {
-            for (int i = 0; i < replace_properties.regex.size(); i++) {
+    protected String processContent(String content, ReplaceField replaceField) throws PostProcessingException {
+        if (replaceField.regex.size() == replaceField.with.size()) {
+            for (int i = 0; i < replaceField.regex.size(); i++) {
                 content = content.replaceAll(
-                        replace_properties.regex.get(i),
-                        replace_properties.with.get(i)
+                        replaceField.regex.get(i),
+                        replaceField.with.get(i)
                 );
             }
         } else {
