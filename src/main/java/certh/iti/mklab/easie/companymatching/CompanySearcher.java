@@ -135,20 +135,7 @@ public class CompanySearcher {
         Iterator<CompanyDocument> it = corpus.iterator(predicate);
 
         int i = 0;
-        ObjectId id = getObjectId(threshold, document, candidates, it);
-        if (id != null) return id;
-
-        Document query = new Document("aliases", company_name).append("country", country);
-        Document c = (Document) companies.find(query).iterator().tryNext();
-        if (c != null) {
-            return c.getObjectId("_id");
-        } else {
-            return null;
-        }
-    }
-
-    private ObjectId getObjectId(double threshold, CompanyDocument document, HashMap<String, Double> candidates, Iterator<CompanyDocument> it) {
-        while (it.hasNext()){
+        while (it.hasNext()) {
             CompanyDocument company = it.next();
 
             double similarity = tfidf.similarity("candidate", company.id);
@@ -162,10 +149,17 @@ public class CompanySearcher {
             String id = (String) MapFunctionsUtils.getTopValues2(candidates, 1).keySet().iterator().next();
             return new ObjectId(id.replaceAll("_.*", ""));
         }
-        return null;
+
+        Document query = new Document("aliases", company_name).append("country", country);
+        Document c = (Document) companies.find(query).iterator().tryNext();
+        if (c != null) {
+            return c.getObjectId("_id");
+        } else {
+            return null;
+        }
     }
 
-    public ObjectId search(String company_name) {
+        public ObjectId search(String company_name) {
 
         double threshold = 0.9;
 
@@ -179,8 +173,20 @@ public class CompanySearcher {
 
         Iterator<CompanyDocument> it = corpus.iterator();
 
-        ObjectId id = getObjectId(threshold, document, candidates, it);
-        if (id != null) return id;
+        while (it.hasNext()) {
+            CompanyDocument company = it.next();
+
+            double similarity = tfidf.similarity("candidate", company.id);
+
+            if (similarity >= threshold && !company.equals(document)) {
+                candidates.put(company.id, similarity);
+            }
+        }
+
+        if (candidates.size() > 0) {
+            String id = (String) MapFunctionsUtils.getTopValues2(candidates, 1).keySet().iterator().next();
+            return new ObjectId(id.replaceAll("_.*", ""));
+        }
 
         Document query = new Document("aliases", company_name);
         Document c = (Document) companies.find(query).iterator().tryNext();

@@ -60,25 +60,28 @@ public class ConfigurationReader {
         deserialize();
     }
 
-    private void deserialize(String schemaPath) throws IOException, ProcessingException, IllegalSchemaException {
-        ConfigurationValidator validator = new ConfigurationValidator(schemaPath);
+    private void deserialize(String SchemaPath) throws IOException, ProcessingException, IllegalSchemaException {
+        ConfigurationValidator validator = new ConfigurationValidator(SchemaPath);
         validator.validate(ConfigurationFile);
         System.out.println("------------------------------------------------------------------------");
-        System.out.println("Validation of configuration file:" + ConfigurationFile + " is been completed...");
+        System.out.println("Validation of configuration file:"+ConfigurationFile+" is been completed...");
 
-        performDeserialization();
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        JSONConfigurationDeserializer deserializer = new JSONConfigurationDeserializer();
+        gsonBuilder.registerTypeAdapter(Configuration.class, deserializer);
+        Gson gson = gsonBuilder.setPrettyPrinting().create();
+        config = gson.fromJson(content, Configuration.class);
+
+        System.out.println("Successful deserialization of configuration file...");
+        System.out.println("------------------------------------------------------------------------");
     }
-
-    private void deserialize() throws IOException, ProcessingException, IllegalSchemaException {
+    
+    private void deserialize() throws IOException, ProcessingException, IllegalSchemaException{
         ConfigurationValidator validator = new ConfigurationValidator("C:\\Users\\vasgat\\Desktop\\Scrapers");
         validator.validate(content);
         System.out.println("------------------------------------------------------------------------");
-        System.out.println("Validation of configuration file:" + ConfigurationFile + " is been completed...");
-
-        performDeserialization();
-    }
-
-    private void performDeserialization() throws IOException, ProcessingException, IllegalSchemaException {
+        System.out.println("Validation of configuration file:"+ConfigurationFile+" is been completed...");
+        
         GsonBuilder gsonBuilder = new GsonBuilder();
         JSONConfigurationDeserializer deserializer = new JSONConfigurationDeserializer();
         gsonBuilder.registerTypeAdapter(Configuration.class, deserializer);

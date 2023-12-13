@@ -42,83 +42,95 @@ public class StoreUtils {
         this.entity_name = entity_name;
     }
 
-    public void toMongoDB(MongoCollection companiesCollection, MongoCollection metricsCollection, String sourceName) throws UnknownHostException, IOException {
-        for (int i = 0; i < extracted_company_info.size(); i++) {
-            Document companyInfo = extracted_company_info.get(i);
+    public void toMongoDB(MongoCollection companies_collection, MongoCollection metrics_collection, String source_name) throws UnknownHostException, IOException {
 
-            if (companyInfo.size() == 0 || !companyInfo.containsKey("company_name")) {
+
+        for (int i = 0; i < extracted_company_info.size(); i++) {
+            if (extracted_company_info.get(i).size() == 0) {
                 continue;
             }
+            Document company_info = extracted_company_info.get(i);
 
-            processCompanyInfo(companiesCollection, metricsCollection, sourceName, companyInfo, extracted_metrics.get(i));
-        }
-    }
+            if (!company_info.containsKey("company_name")) {
+                continue;
+            }
+            CompanyMatcher companyMatcher = new CompanyMatcher(
+                    companies_collection,
+                    (String) company_info.get("company_name"),
+                    (String) company_info.get("country"),
+                    (String) company_info.get("website")
+            );
 
-    private void processCompanyInfo(
-            MongoCollection companiesCollection,
-            MongoCollection metricsCollection,
-            String sourceName,
-            Document companyInfo,
-            ArrayList<Document> metrics) throws IOException {
+            Iterator iter = company_info.entrySet().iterator();
 
-        CompanyMatcher companyMatcher = new CompanyMatcher(
-                companiesCollection,
-                (String) companyInfo.get("company_name"),
-                (String) companyInfo.get("country"),
-                (String) companyInfo.get("website")
-        );
+            while (iter.hasNext()) {
+                Map.Entry<String, Object> entry
+                        = (Map.Entry<String, Object>) iter.next();
+                if (!entry.getKey().equals("company_name")
+                        && !entry.getKey().equals("country")
+                        && !entry.getKey().equals("website")) {
 
-        Iterator<Map.Entry<String, Object>> iter = companyInfo.entrySet().iterator();
-        while (iter.hasNext()) {
-            Map.Entry<String, Object> entry = iter.next();
-            String key = entry.getKey();
+                    companyMatcher.insertInfo(
+                            entry.getKey(),
+                            entry.getValue().toString()
+                    );
+                }
+            }
 
-            if (!key.equals("company_name") && !key.equals("country") && !key.equals("website")) {
-                companyMatcher.insertInfo(key, entry.getValue().toString());
+            ArrayList<Document> metrics = extracted_metrics.get(i);
+
+            Iterator<Document> metrics_iterator = metrics.iterator();
+            while (metrics_iterator.hasNext()) {
+
+                Document metric = metrics_iterator.next();
+
+                metric.append("company_id", companyMatcher.getId()).append("source_name", source_name);
+
+                metrics_collection.insertOne(metric);
+                metric.remove("company_id");
+                metric.remove("_id");
             }
         }
-
-        for (Document metric : metrics) {
-            metric.append("company_id", companyMatcher.getId()).append("source_name", sourceName);
-            metricsCollection.insertOne(metric);
-            metric.remove("company_id");
-            metric.remove("_id");
-        }
     }
 
-    public void toMongoDB(MongoCollection metricsCollection) {
+    public void toMongoDB(MongoCollection metrics_collection) {
+
         if (extracted_company_info != null) {
             number_of_metrics = 0;
 
             for (int j = 0; j < extracted_company_info.size(); j++) {
-                Document company = extracted_company_info.get(j);
-                ArrayList<Document> tempMetrics = extracted_metrics.get(j);
-                ArrayList<Document> metrics = new ArrayList<>();
 
-                for (Document tempMetric : tempMetrics) {
-                    if (!tempMetric.getString("name").equals("crawl_to")) {
+                Document company = extracted_company_info.get(j);
+
+                ArrayList metrics = new ArrayList();
+
+                ArrayList<Document> temp_metrics = extracted_metrics.get(j);
+                for (int i = 0; i < temp_metrics.size(); i++) {
+                    if (!temp_metrics.get(i).getString("name").equals("crawl_to")) {
                         number_of_metrics++;
-                        metrics.add(tempMetric);
+                        metrics.add(temp_metrics.get(i));
                     }
                 }
 
                 Document json = new Document().append("company", company).append("metrics", metrics);
-                metricsCollection.insertOne(json);
+
+                metrics_collection.insertOne(json);
             }
+
         } else {
             for (int j = 0; j < extracted_metrics.size(); j++) {
-                ArrayList<Document> tempMetrics = extracted_metrics.get(j);
+                ArrayList<Document> temp_metrics = extracted_metrics.get(j);
 
                 Document json = new Document();
-                for (int i = 0; i < tempMetrics.size(); i++) {
-                    if (!tempMetrics.get(i).getString("name").equals("crawl_to")) {
+                for (int i = 0; i < temp_metrics.size(); i++) {
+                    if (!temp_metrics.get(i).getString("name").equals("crawl_to")) {
                         number_of_metrics++;
-                        json.append(tempMetrics.get(i).getString("name"), tempMetrics.get(i).getString("value"));
+                        json.append(temp_metrics.get(i).getString("name"), temp_metrics.get(i).getString("value"));
                     }
                 }
-                json.append("source", tempMetrics.get(0).getString("source"));
-                json.append("citeyear", tempMetrics.get(0).getString("citeyear"));
-                metricsCollection.insertOne(json);
+                json.append("sourccoe", temp_metrics.get(0).getString("source"));
+                json.append("citeyear", temp_metrics.get(0).getString("citeyear"));
+                metrics_collection.insertOne(json);
             }
         }
     }
@@ -155,44 +167,53 @@ public class StoreUtils {
         ArrayList<Document> results = new ArrayList<>();
 
         if (extracted_company_info != null) {
+
             for (int j = 0; j < extracted_company_info.size(); j++) {
+                if (extracted_company_info.isEmpty()) {
+                    continue;
+                }
+
                 Document company = extracted_company_info.get(j);
-                ArrayList<Document> metrics = processMetrics(extracted_metrics.get(j));
-                results.add(new Document(entity_name, company).append("metrics", metrics));
+
+                ArrayList<Document> metrics = new ArrayList();
+
+                ArrayList<Document> temp_metrics = extracted_metrics.get(j);
+                for (int i = 0; i < temp_metrics.size(); i++) {
+                    if (!temp_metrics.get(i).getString("name").equals("crawl_to")) {
+                        number_of_metrics++;
+                        metrics.add(Document.parse(temp_metrics.get(i).toJson()));
+                    }
+                }
+
+                Document json = new Document().append(entity_name, company).append("metrics", metrics);
+
+                results.add(json);
             }
         } else {
-            for (ArrayList<Document> temp_metrics : extracted_metrics) {
-                ArrayList<Document> metrics = processMetrics(temp_metrics);
-                results.addAll(metrics);
-            }
-        }
+            ArrayList<Document> metrics = new ArrayList();
 
+            for (int j = 0; j < extracted_metrics.size(); j++) {
+                ArrayList<Document> temp_metrics = extracted_metrics.get(j);
+
+                Document json = new Document();
+                for (int i = 0; i < temp_metrics.size(); i++) {
+                    if (!temp_metrics.get(i).getString("name").equals("crawl_to")) {
+                        number_of_metrics++;
+                        json.append(temp_metrics.get(i).getString("name"), temp_metrics.get(i).getString("value"));
+                    }
+                }
+                json.append("source", temp_metrics.get(0).getString("source"));
+                json.append("citeyear", temp_metrics.get(0).getString("citeyear"));
+                metrics.add(json);
+            }
+
+            results.addAll(metrics);
+        }
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z");
         Date date = new Date(System.currentTimeMillis());
 
-        return new Document("results", results)
-                .append("timestamp", formatter.format(date))
-                .toJson(JsonWriterSettings.builder().indent(true).build());
-    }
+        return new Document("results", results).append("timestamp", formatter.format(date)).toJson(JsonWriterSettings.builder().indent(true).build());
 
-    private ArrayList<Document> processMetrics(ArrayList<Document> tempMetrics) {
-        ArrayList<Document> metrics = new ArrayList<>();
-
-        for (Document tempMetric : tempMetrics) {
-            if (!tempMetric.getString("name").equals("crawl_to")) {
-                number_of_metrics++;
-                metrics.add(Document.parse(tempMetric.toJson()));
-            }
-        }
-
-        if (tempMetrics.size() > 0) {
-            Document json = new Document();
-            json.append("source", tempMetrics.get(0).getString("source"));
-            json.append("citeyear", tempMetrics.get(0).getString("citeyear"));
-            metrics.add(json);
-        }
-
-        return metrics;
     }
 
     public String exportCSV(String wikirate_metric_designer) {

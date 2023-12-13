@@ -76,7 +76,35 @@ public class GroupHTMLExtractor extends AbstractHTMLExtractor {
      */
     @Override
     public List<Document> extractFields(List<ScrapableField> fields) throws URISyntaxException, IOException {
-        return extractData(fields, null);
+        ArrayList<Document> extractedFields = new ArrayList();
+
+        Iterator links = group_of_urls.iterator();
+        ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
+
+        List<Future<ArrayList>> handles = new ArrayList<Future<ArrayList>>();
+        while (links.hasNext()) {
+            handles.add(executorService.submit(new SingleStaticPageExtractor(
+                    base_url + links.next().toString().replace(base_url, ""),
+                    null,
+                    null,
+                    fields
+            )));
+        }
+        for (int t = 0, n = handles.size(); t < n; t++) {
+            try {
+                extractedFields.addAll(handles.get(t).get());
+            } catch (ExecutionException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (NoSuchElementException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (NullPointerException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        executorService.shutdownNow();
+        return extractedFields;
     }
 
     /**
@@ -91,16 +119,12 @@ public class GroupHTMLExtractor extends AbstractHTMLExtractor {
      */
     @Override
     public List<Document> extractTable(String tableSelector, List<ScrapableField> fields) throws URISyntaxException, IOException {
-        return extractData(fields, tableSelector);
-    }
-
-    private List<Document> extractData(List<ScrapableField> fields, String tableSelector) throws URISyntaxException, IOException {
-        ArrayList<Document> extractedFields = new ArrayList<>();
+        ArrayList<Document> extractedFields = new ArrayList();
 
         Iterator links = group_of_urls.iterator();
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
 
-        List<Future<ArrayList>> handles = new ArrayList<>();
+        List<Future<ArrayList>> handles = new ArrayList<Future<ArrayList>>();
         while (links.hasNext()) {
             handles.add(executorService.submit(new SingleStaticPageExtractor(
                     base_url + links.next().toString().replace(base_url, ""),
@@ -112,7 +136,11 @@ public class GroupHTMLExtractor extends AbstractHTMLExtractor {
         for (int t = 0, n = handles.size(); t < n; t++) {
             try {
                 extractedFields.addAll(handles.get(t).get());
-            } catch (ExecutionException | InterruptedException | NoSuchElementException | NullPointerException ex) {
+            } catch (ExecutionException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (NoSuchElementException ex) {
                 Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
@@ -120,14 +148,50 @@ public class GroupHTMLExtractor extends AbstractHTMLExtractor {
         return extractedFields;
     }
 
-    public Pair extractFieldsOrTable(List<ScrapableField> cfields, List<ScrapableField> sfields, String tableSelector) throws InterruptedException {
-        ArrayList<HashMap> extractedCFields = new ArrayList<>();
-        ArrayList<HashMap> extractedSFields = new ArrayList<>();
+    @Override
+    public Pair extractFields(List<ScrapableField> cfields, List<ScrapableField> sfields) throws InterruptedException {
+        ArrayList<HashMap> extractedCFields = new ArrayList();
+        ArrayList<HashMap> extractedSFields = new ArrayList();
 
         Iterator links = group_of_urls.iterator();
         ExecutorService executorService = Executors.newFixedThreadPool(10);
 
-        List<Future<Pair>> handles = new ArrayList<>();
+        List<Future<Pair>> handles = new ArrayList<Future<Pair>>();
+        while (links.hasNext()) {
+            handles.add(executorService.submit(new SingleStaticPageExtractor(
+                    base_url + links.next().toString().replace(base_url, ""),
+                    null,
+                    cfields,
+                    sfields
+            )));
+        }
+        for (int t = 0, n = handles.size(); t < n; t++) {
+            try {
+                if (handles.get(t).get() != null) {
+                    extractedCFields.addAll((ArrayList) handles.get(t).get().getKey());
+                    extractedSFields.addAll((ArrayList) handles.get(t).get().getValue());
+                }
+            } catch (ExecutionException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (NoSuchElementException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        executorService.shutdownNow();
+        return Pair.of(extractedCFields, extractedSFields);
+    }
+
+    @Override
+    public Pair extractTable(String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws InterruptedException {
+        ArrayList<HashMap> extractedCFields = new ArrayList();
+        ArrayList<HashMap> extractedSFields = new ArrayList();
+
+        Iterator links = group_of_urls.iterator();
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+
+        List<Future<Pair>> handles = new ArrayList<Future<Pair>>();
         while (links.hasNext()) {
             handles.add(executorService.submit(new SingleStaticPageExtractor(
                     base_url + links.next().toString().replace(base_url, ""),
@@ -138,26 +202,17 @@ public class GroupHTMLExtractor extends AbstractHTMLExtractor {
         }
         for (int t = 0, n = handles.size(); t < n; t++) {
             try {
-                Pair result = handles.get(t).get();
-                if (result != null) {
-                    extractedCFields.addAll((ArrayList) result.getKey());
-                    extractedSFields.addAll((ArrayList) result.getValue());
-                }
-            } catch (ExecutionException | InterruptedException | NoSuchElementException ex) {
+                extractedCFields.addAll((ArrayList) handles.get(t).get().getKey());
+                extractedSFields.addAll((ArrayList) handles.get(t).get().getValue());
+            } catch (ExecutionException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (NoSuchElementException ex) {
                 Logger.getLogger(StaticHTMLExtractor.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         executorService.shutdownNow();
         return Pair.of(extractedCFields, extractedSFields);
-    }
-
-    @Override
-    public Pair extractFields(List<ScrapableField> cfields, List<ScrapableField> sfields) throws InterruptedException {
-        return extractFieldsOrTable(cfields, sfields, null);
-    }
-
-    @Override
-    public Pair extractTable(String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws InterruptedException {
-        return extractFieldsOrTable(cfields, sfields, tableSelector);
     }
 }
