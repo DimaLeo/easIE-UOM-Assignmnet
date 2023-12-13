@@ -16,20 +16,13 @@
 package certh.iti.mklab.easie.executor.handlers;
 
 import certh.iti.mklab.easie.companymatching.CompanyMatcher;
-import certh.iti.mklab.easie.companymatching.CompanySearcher;
-import certh.iti.mklab.easie.companymatching.CountryAbreviationsLoader;
 import com.mongodb.client.MongoCollection;
 
 import java.io.*;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import org.apache.commons.lang3.StringEscapeUtils;
 import org.bson.Document;
 import org.bson.json.JsonWriterSettings;
 
@@ -51,8 +44,6 @@ public class StoreUtils {
 
     public void toMongoDB(MongoCollection companies_collection, MongoCollection metrics_collection, String source_name) throws UnknownHostException, IOException {
 
-        CompanySearcher searcher = new CompanySearcher(companies_collection);
-        CountryAbreviationsLoader loader = new CountryAbreviationsLoader();
 
         for (int i = 0; i < extracted_company_info.size(); i++) {
             if (extracted_company_info.get(i).size() == 0) {
@@ -63,13 +54,11 @@ public class StoreUtils {
             if (!company_info.containsKey("company_name")) {
                 continue;
             }
-            CompanyMatcher matcher = matcher = new CompanyMatcher(
+            CompanyMatcher companyMatcher = new CompanyMatcher(
+                    companies_collection,
                     (String) company_info.get("company_name"),
                     (String) company_info.get("country"),
-                    (String) company_info.get("website"),
-                    companies_collection,
-                    searcher,
-                    loader
+                    (String) company_info.get("website")
             );
 
             Iterator iter = company_info.entrySet().iterator();
@@ -81,7 +70,7 @@ public class StoreUtils {
                         && !entry.getKey().equals("country")
                         && !entry.getKey().equals("website")) {
 
-                    matcher.insertInfo(
+                    companyMatcher.insertInfo(
                             entry.getKey(),
                             entry.getValue().toString()
                     );
@@ -95,7 +84,7 @@ public class StoreUtils {
 
                 Document metric = metrics_iterator.next();
 
-                metric.append("company_id", matcher.getId()).append("source_name", source_name);
+                metric.append("company_id", companyMatcher.getId()).append("source_name", source_name);
 
                 metrics_collection.insertOne(metric);
                 metric.remove("company_id");

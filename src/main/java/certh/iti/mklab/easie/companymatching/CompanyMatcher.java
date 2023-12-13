@@ -15,14 +15,10 @@
  */
 package certh.iti.mklab.easie.companymatching;
 
-import certh.iti.mklab.easie.MongoUtils;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoCursor;
 
-import java.net.UnknownHostException;
-import java.util.ArrayList;
+import java.io.IOException;
 
-import org.bson.Document;
 import org.bson.types.ObjectId;
 
 /**
@@ -30,32 +26,24 @@ import org.bson.types.ObjectId;
  */
 public class CompanyMatcher {
 
+    private final CompanyDatabaseActions companyDatabaseActions;
+    private final CountryAbreviationsLoader loader = new CountryAbreviationsLoader();
     private String company_name;
     private String website;
     private ObjectId company_id;
-    private MongoCollection companies;
-    private CompanySearcher searcher;
     private String country;
 
-    /**
-     * Creates a Company object that connects the Company Name and Website with
-     * * an entry from the dataset or creates a new one
-     *
-     * @param company_name
-     * @param country
-     * @param website
-     * @param companies_collection
-     * @param searcher
-     * @param loader
-     * @throws UnknownHostException
-     */
-    public CompanyMatcher(String company_name, String country, String website, MongoCollection companies_collection, CompanySearcher searcher, CountryAbreviationsLoader loader) throws UnknownHostException {
+    public CompanyMatcher(MongoCollection companies_collection, String company_name, String country, String website) throws IOException {
+        this.companyDatabaseActions = new CompanyDatabaseActions(companies_collection);
+        buildCompanyMatcher(company_name, country, website);
+
+    }
+
+    private void buildCompanyMatcher(String company_name, String country, String website) {
         this.company_name = company_name.trim();
         if (this.website != null) {
             this.website = website.trim();
         }
-        this.companies = companies_collection;
-        this.searcher = searcher;
         if (country != null) {
             this.country = country.replaceAll("\\.", "");
             if (this.country.trim().length() == 2 && loader.TwoLetterABR.containsKey(this.country.trim())) {
@@ -64,18 +52,21 @@ public class CompanyMatcher {
                 this.country = loader.ThreeLetterABR.get(this.country.trim());
             }
         }
+
         if (this.website != null && !this.website.equals("-") && !this.website.equals("")) {
-            this.company_id = findCompanyId(this.company_name, this.website, this.country);
+            this.company_id = companyDatabaseActions.findCompanyId(this.company_name, this.website, this.country);
         } else {
-            this.company_id = findCompanyId(this.company_name, this.country);
+            this.company_id = companyDatabaseActions.findCompanyId(this.company_name,null, this.country);
         }
+
         if (company_id == null) {
-            company_id = insertCompany();
+            company_id = companyDatabaseActions.insertCompany(company_name, website);
         }
         if (country != null) {
             insertInfo("country", this.country);
         }
     }
+
 
     /**
      * This method inserts a field with extra infomation for the company in the
@@ -85,25 +76,7 @@ public class CompanyMatcher {
      * @param fieldValue
      */
     public void insertInfo(String fieldName, String fieldValue) {
-        long result_size = companies.count(
-                new Document(
-                        "_id",
-                        company_id
-                ).append(
-                        fieldName.trim(),
-                        new Document(
-                                "$exists",
-                                true
-                        )
-                )
-        );
-        if (result_size == 0) {
-            companies.updateOne(new Document("_id", company_id),
-                    new Document("$set",
-                            new Document()
-                                    .append(fieldName.trim(),
-                                            fieldValue.trim())));
-        }
+        companyDatabaseActions.insertInfo(fieldName, fieldValue, company_id);
     }
 
     /**
@@ -133,18 +106,8 @@ public class CompanyMatcher {
      *
      * @return company's id
      */
-    private ObjectId insertCompany() {
-        Document object = new Document();
-
-        object.append("company_name", company_name.trim());
-        if (website != null) {
-            object.append("website", website.toLowerCase());
-        }
-        ArrayList list = new ArrayList();
-        list.add(company_name.trim());
-        object.append("aliases", list);
-        ObjectId id = MongoUtils.insertDoc(companies, object);
-        return id;
+    private ObjectId insertCompany(String company_name, String website) {
+        return companyDatabaseActions.insertCompany(company_name,website);
     }
 
     /**
@@ -154,83 +117,5 @@ public class CompanyMatcher {
      * @param CLink company's website
      * @returns company's id if the company exists to database
      */
-    private ObjectId findCompanyId(String CompanyName, String CLink, String Country) {
-        ObjectId tempId = searcher.search(CompanyName, CLink.toLowerCase(), Country);
-        if (tempId == null) {
-            tempId = searcher.search(CompanyName, Country);
-            if (tempId != null && new Company(tempId, companies).getLink() == null) {
-                MongoCursor<Document> tempCursor = companies
-                        .find(new Document()
-                                .append("_id", tempId))
-                        .iterator();
 
-                ArrayList aliases = (ArrayList) tempCursor.next().get("aliases");
-
-                if (!aliases.contains(CompanyName)) {
-                    aliases.add(CompanyName);
-                    companies.updateOne(new Document("_id", tempId),
-                            new Document("$set",
-                                    new Document()
-                                            .append("aliases",
-                                                    aliases)));
-                    companies.updateOne(new Document("_id", tempId),
-                            new Document("$set",
-                                    new Document()
-                                            .append("website",
-                                                    CLink.toLowerCase())));
-                }
-            } else {
-                tempId = null;
-            }
-        } else {
-            MongoCursor<Document> tempCursor = companies.find(new Document()
-                    .append("_id", tempId)).noCursorTimeout(true).iterator();
-
-            ArrayList aliases = (ArrayList) tempCursor.next().get("aliases");
-
-            if (!aliases.contains(CompanyName)) {
-                aliases.add(CompanyName);
-                companies.updateOne(new Document("_id", tempId),
-                        new Document("$set",
-                                new Document()
-                                        .append("aliases",
-                                                aliases)));
-            }
-        }
-        return tempId;
-    }
-
-    /**
-     * Searches if the company exists to the database by having available only
-     * Company's name
-     *
-     * @throws UnknownHostException
-     * @returns company's id, if it is exists in db.
-     */
-    private ObjectId findCompanyId(String CompanyName, String Country) throws UnknownHostException {
-
-        ObjectId tempId = searcher.search(CompanyName, Country);
-        if (tempId != null) {
-            MongoCursor<Document> tempCursor = companies.find(
-                    new Document()
-                            .append(
-                                    "_id",
-                                    tempId
-                            )
-            ).iterator();
-
-            ArrayList aliases = (ArrayList) tempCursor.next()
-                    .get("aliases");
-
-            if (!aliases.contains(CompanyName)) {
-                aliases.add(CompanyName);
-                companies.updateOne(new Document("_id", tempId),
-                        new Document("$set",
-                                new Document()
-                                        .append("aliases",
-                                                aliases)));
-            }
-        }
-        return tempId;
-    }
 }
