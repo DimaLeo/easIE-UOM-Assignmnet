@@ -51,35 +51,24 @@ public class ConfigurationValidator {
         );
     }
 
-    public void validate(File ConfigurationFile) throws IOException, ProcessingException, IllegalSchemaException {
-        JsonNode Configuration = JsonLoader.fromFile(ConfigurationFile);
-
-        ProcessingReport r1 = VALIDATOR.validate(
-                ConfigurationSchema,
-                Configuration
-        );
-
-        if (!r1.isSuccess()) {
-            Iterator<ProcessingMessage> it = r1.iterator();
-            ProcessingMessage pm = it.next();
-            JSONObject o = new JSONObject(pm.asJson().toString());
-            throw new IllegalSchemaException(o.toString(4));
-        }
+    public void validate(File configurationFile) throws IOException, ProcessingException, IllegalSchemaException {
+        JsonNode configuration = JsonLoader.fromFile(configurationFile);
+        performValidation(configuration);
     }
 
-    public void validate(String ConfigurationFile) throws IOException, ProcessingException, IllegalSchemaException {
-        JsonNode Configuration = JsonLoader.fromString(ConfigurationFile);
+    public void validate(String configurationFile) throws IOException, ProcessingException, IllegalSchemaException {
+        JsonNode configuration = JsonLoader.fromString(configurationFile);
+        performValidation(configuration);
+    }
 
-        ProcessingReport r1 = VALIDATOR.validate(
-                ConfigurationSchema,
-                Configuration
-        );
+    private void performValidation(JsonNode configuration) throws IOException, ProcessingException, IllegalSchemaException {
+        ProcessingReport report = VALIDATOR.validate(ConfigurationSchema, configuration);
 
-        if (!r1.isSuccess()) {
-            Iterator<ProcessingMessage> it = r1.iterator();
-            ProcessingMessage pm = it.next();
-            JSONObject o = new JSONObject(pm.asJson().toString());
-            throw new IllegalSchemaException(o.toString(4));
+        if (!report.isSuccess()) {
+            Iterator<ProcessingMessage> iterator = report.iterator();
+            ProcessingMessage message = iterator.next();
+            JSONObject jsonObject = new JSONObject(message.asJson().toString());
+            throw new IllegalSchemaException(jsonObject.toString(4));
         }
     }
 

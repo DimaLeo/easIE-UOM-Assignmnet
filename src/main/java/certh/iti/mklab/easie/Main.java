@@ -42,6 +42,8 @@ import org.bson.json.JsonWriterSettings;
 import org.json.JSONArray;
 import org.jsoup.select.Selector.SelectorParseException;
 
+import static java.lang.System.exit;
+
 /**
  * @author vasgat
  */
@@ -49,84 +51,44 @@ public class Main {
 
 
     public static void main(String[] args) throws URISyntaxException, NoSuchAlgorithmException {
-        if (args.length == 1) {
-            try {
-                ConfigurationReader reader = new ConfigurationReader(args[0], ".");
-                Configuration config = reader.getConfiguration();
-
-                WrapperExecutor executor = new WrapperExecutor(config, ".");
-
-                ArrayList companies = (ArrayList) executor.getCompanyInfo();
-                ArrayList metrics = executor.getExtractedMetrics();
-
-                DataHandler dh = new DataHandler(companies, metrics, config.entity_name);
-
-                if (config.store != null) {
-                    dh.store(config.store, config.source_name);
-                    System.out.println("EXTRACTION TASK COMPLETED");
-                } else {
-                    JSONArray array = new JSONArray(dh.exportJson());
-                    System.out.println(array.toString(4));
-                }
-            } catch (IOException ex) {
-                System.out.println(ex.getMessage());
-            } catch (ProcessingException ex) {
-                System.out.println(ex.getMessage());
-            } catch (IllegalSchemaException ex) {
-                System.out.println(ex.getMessage());
-            } catch (InterruptedException ex) {
-                System.out.println(ex.getMessage());
-            } catch (PaginationException ex) {
-                System.out.println(ex.getMessage());
-            } catch (RelativeURLException ex) {
-                System.out.println(ex.getMessage());
-            } catch (SelectorParseException ex) {
-                System.out.println(ex.getMessage());
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (KeyManagementException e) {
-                e.printStackTrace();
+        try {
+            ConfigurationReader reader = null;
+            if(args.length == 1){
+                reader = new ConfigurationReader(args[0], ".");
             }
-        } else if (args.length == 2) {
-            try {
-                ConfigurationReader reader = new ConfigurationReader(args[0], args[1]);
-                Configuration config = reader.getConfiguration();
-
-                WrapperExecutor executor = new WrapperExecutor(config, args[1]);
-
-                ArrayList companies = (ArrayList) executor.getCompanyInfo();
-                ArrayList metrics = executor.getExtractedMetrics();
-
-                DataHandler dh = new DataHandler(companies, metrics, config.entity_name);
-
-                if (config.store != null) {
-                    dh.store(config.store, config.source_name);
-                    System.out.println("EXTRACTION TASK COMPLETED");
-                } else {
-                    JSONArray array = new JSONArray(dh.exportJson());
-                    System.out.println(array.toString(4));
-                }
-            } catch (IOException ex) {
-                System.out.println(ex.getMessage());
-            } catch (ProcessingException ex) {
-                System.out.println(ex.getMessage());
-            } catch (IllegalSchemaException ex) {
-                System.out.println(ex.getMessage());
-            } catch (InterruptedException ex) {
-                System.out.println(ex.getMessage());
-            } catch (PaginationException ex) {
-                System.out.println(ex.getMessage());
-            } catch (RelativeURLException ex) {
-                System.out.println(ex.getMessage());
-            } catch (SelectorParseException ex) {
-                System.out.println(ex.getMessage());
-            } catch (KeyManagementException e) {
-                e.printStackTrace();
+            else if(args.length == 2){
+                reader = new ConfigurationReader(args[0], args[1]);
             }
-        } else if (args.length == 0) {
-            System.out.println("You need to provide the configuration file filepath!");
-        } else {
-            System.out.println("Maximum two vars can be defined...");
+            else if(args.length == 0) {
+                System.out.println("You need to provide the configuration file filepath!");
+                exit(1);
+            }
+            else {
+                System.out.println("Maximum two vars can be defined...");
+                exit(1);
+            }
+
+            Configuration config = reader.getConfiguration();
+
+            WrapperExecutor executor = new WrapperExecutor(config, ".");
+
+            ArrayList companies = (ArrayList) executor.getCompanyInfo();
+            ArrayList metrics = executor.getExtractedMetrics();
+
+            DataHandler dh = new DataHandler(companies, metrics, config.entity_name);
+
+            if (config.store != null) {
+                dh.store(config.store, config.source_name);
+                System.out.println("EXTRACTION TASK COMPLETED");
+            } else {
+                JSONArray array = new JSONArray(dh.exportJson());
+                System.out.println(array.toString(4));
+            }
+        } catch (IOException | SelectorParseException | RelativeURLException | PaginationException |
+                 InterruptedException | IllegalSchemaException | ProcessingException ex) {
+            System.out.println(ex.getMessage());
+        } catch (NoSuchAlgorithmException | KeyManagementException e) {
+            e.printStackTrace();
         }
     }
 
