@@ -48,15 +48,12 @@ import org.jsoup.nodes.Document;
  */
 public class PaginationIterator extends AbstractHTMLExtractor {
 
-    private String next_page_selector;
+    private Pagination pagination;
     private String base_url;
     private String relative_url;
     private int numThreads;
     private String frontPattern;
     private String rearPattern;
-    private int step;
-    private int startPage;
-    private boolean thereisPattern;
 
     /**
      * Creates a new PaginationIterator
@@ -66,20 +63,19 @@ public class PaginationIterator extends AbstractHTMLExtractor {
      * @throws IOException
      */
     public PaginationIterator(String base_url, String relative_url, String next_page_selector) throws URISyntaxException, IOException, NoSuchAlgorithmException, KeyManagementException {
+        this.pagination = new Pagination(next_page_selector);
         this.base_url = base_url;
         this.relative_url = relative_url;
-        this.next_page_selector = next_page_selector;
         this.numThreads = 20;
-        thereisPattern = thereisPattern();
     }
 
-    private List<HashMap> extractData(String frontPattern, String rearPattern, String tableSelector, List<ScrapableField> pageFields, List<ScrapableField> tableFields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException {
+    private List<HashMap> extractData(String frontPattern, String rearPattern, String tableSelector, List<ScrapableField> pageFields, List<ScrapableField> tableFields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException {
         ArrayList<HashMap> extractedFields = new ArrayList<>();
 
-        if (thereisPattern) {
-            extractedFields.addAll((ArrayList) MultiThreadPagination(frontPattern, rearPattern, tableSelector, pageFields, tableFields));
+        if (pagination.thereisPattern(base_url, relative_url)) {
+            extractedFields.addAll(pagination.multiThreadPagination(frontPattern, rearPattern, tableSelector, pageFields, tableFields));
         } else {
-            extractedFields.addAll(SingleThreadPagination(new SingleStaticPageExtractor(base_url + relative_url, tableSelector, pageFields, tableFields)));
+            extractedFields.addAll(pagination.singleThreadPagination(new SingleStaticPageExtractor(base_url + relative_url, tableSelector, pageFields, tableFields), base_url));
         }
 
         return extractedFields;
@@ -95,7 +91,7 @@ public class PaginationIterator extends AbstractHTMLExtractor {
      * @throws Exception
      */
     @Override
-    public List<HashMap> extractFields(List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException {
+    public List<HashMap> extractFields(List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException {
         return extractData(frontPattern, rearPattern, null, null, fields);
     }
 
@@ -110,19 +106,19 @@ public class PaginationIterator extends AbstractHTMLExtractor {
      * @throws Exception
      */
     @Override
-    public List<HashMap> extractTable(String tableSelector, List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException {
+    public List<HashMap> extractTable(String tableSelector, List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException {
         return extractData(frontPattern, rearPattern, tableSelector, null, fields);
     }
 
-    public Pair extractFieldsOrTable(String frontPattern, String rearPattern, String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException {
+    public Pair extractFieldsOrTable(String frontPattern, String rearPattern, String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException {
         ArrayList<HashMap> extractedCFields = new ArrayList<>();
         ArrayList<HashMap> extractedSFields = new ArrayList<>();
         ArrayList temp;
 
-        if (thereisPattern) {
-            temp = (ArrayList) MultiThreadPagination(frontPattern, rearPattern, tableSelector, cfields, sfields);
+        if (pagination.thereisPattern(base_url, relative_url)) {
+            temp = (ArrayList) pagination.multiThreadPagination(frontPattern, rearPattern, tableSelector, cfields, sfields);
         } else {
-            temp = SingleThreadPagination(new SingleStaticPageExtractor(base_url + relative_url, tableSelector, cfields, sfields));
+            temp = pagination.singleThreadPagination(new SingleStaticPageExtractor(base_url + relative_url, tableSelector, cfields, sfields), base_url);
         }
 
         for (int i = 0; i < temp.size(); i++) {
@@ -134,108 +130,14 @@ public class PaginationIterator extends AbstractHTMLExtractor {
     }
 
     @Override
-    public Pair extractFields(List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException {
+    public Pair extractFields(List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException {
         return extractFieldsOrTable(frontPattern, rearPattern, null, cfields, sfields);
     }
 
     @Override
-    public Pair extractTable(String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException {
+    public Pair extractTable(String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException {
         return extractFieldsOrTable(frontPattern, rearPattern, tableSelector, cfields, sfields);
     }
 
-    private boolean thereisPattern() throws IOException, URISyntaxException, KeyManagementException, NoSuchAlgorithmException {
-        try {
-            StaticHTMLExtractor wrapper = new StaticHTMLExtractor(base_url, relative_url);
-            Document document = (Document) wrapper.fetcher.getHTMLDocument();
-            if (!document.select(next_page_selector).attr("href").equals("")) {
-                String url1 = base_url + document.select(next_page_selector).attr("href").replace(base_url, "");
-                document = Jsoup.connect(new URI(base_url + document.select(next_page_selector).attr("href").replace(wrapper.base_url, "")).toASCIIString())
-                        .userAgent("Mozilla/37.0").timeout(60000).get();
-                String url2 = base_url + document.select(next_page_selector).attr("href").replace(base_url, "");
-                frontPattern = URLPatterns.frontPattern(url1, url2);
-                rearPattern = URLPatterns.rearPattern(url1, url2);
-                if (URLPatterns.isInteger(url2.replace(frontPattern, "").replace(rearPattern, ""))) {
-                    int temp1 = Integer.parseInt(url1.replace(frontPattern, "").replace(rearPattern, ""));
-                    int temp2 = Integer.parseInt(url2.replace(frontPattern, "").replace(rearPattern, ""));
-                    step = temp2 - temp1;
-                    startPage = temp2 - 2 * step;
-                }
-                return URLPatterns.isInteger(url2.replace(frontPattern, "").replace(rearPattern, ""));
-            } else {
-                return false;
-            }
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
 
-    private Object MultiThreadPagination(String frontPattern, String rearPattern, String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws InterruptedException {
-        ArrayList extractedFields = new ArrayList();
-        boolean existNext = true;
-        int i = 0;
-        while (existNext) {
-            ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
-            List<Future<Object>> handles = new ArrayList<Future<Object>>();
-            for (int j = startPage; j <= 100 * step; j = j + step) {
-                int pagenum = i * 100 * step + j;
-
-                handles.add(executorService.submit(new SingleStaticPageExtractor(
-                        frontPattern + pagenum + rearPattern,
-                        tableSelector,
-                        cfields,
-                        sfields
-                )));
-            }
-            executorService.shutdown();
-            executorService.awaitTermination(1, TimeUnit.DAYS);
-            for (int t = 0, n = handles.size(); t < n; t++) {
-                try {
-                    if (handles.get(t).get() instanceof ArrayList) {
-                        ArrayList list = (ArrayList) handles.get(t).get();
-                        if (list.size() == 0 || list == null) {
-                            existNext = false;
-                        } else {
-                            extractedFields.addAll(list);
-                        }
-
-                    } else {
-                        Pair pair = (Pair) handles.get(t).get();
-                        if (pair != null && ((ArrayList) pair.getKey()).size() > 0) {
-                            extractedFields.add(pair);
-                        } else {
-                            existNext = false;
-                        }
-                    }
-                } catch (ExecutionException | InterruptedException | NoSuchElementException ex) {
-                    Logger.getLogger(PaginationIterator.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (NullPointerException wx) {
-
-                }
-            }
-            executorService.shutdownNow();
-            i++;
-
-        }
-        return extractedFields;
-    }
-
-    private ArrayList SingleThreadPagination(SingleStaticPageExtractor singlePageExtractor) throws URISyntaxException, IOException, KeyManagementException {
-        ArrayList extractedFields = new ArrayList();
-        Object result = singlePageExtractor.call();
-        if (result instanceof ArrayList) {
-            extractedFields.addAll((ArrayList) singlePageExtractor.call());
-        } else {
-            extractedFields.add((Pair) singlePageExtractor.call());
-        }
-        while (!singlePageExtractor.document.select(next_page_selector).attr("href").equals("")) {
-            singlePageExtractor.page = base_url + singlePageExtractor.document.select(next_page_selector).attr("href").replace(base_url, "");
-            result = singlePageExtractor.call();
-            if (result instanceof ArrayList) {
-                extractedFields.addAll((ArrayList) result);
-            } else {
-                extractedFields.add((Pair) result);
-            }
-        }
-        return extractedFields;
-    }
 }

@@ -21,6 +21,7 @@ import certh.iti.mklab.easie.extractors.dynamicpages.DynamicHTMLExtractor;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -55,7 +56,7 @@ public final class Configuration {
 
     public Configuration crawl;
 
-    public void executeEvents(DynamicHTMLExtractor wrapper) throws InterruptedException, URISyntaxException, IOException, KeyManagementException {
+    public void executeEvents(DynamicHTMLExtractor wrapper) throws InterruptedException, URISyntaxException, IOException, KeyManagementException, NoSuchAlgorithmException {
         if (this.events instanceof ArrayList) {
             for (Configuration.Event event: (ArrayList<Configuration.Event>) this.events) {
                 this.executeEvent(wrapper, event);
@@ -67,7 +68,7 @@ public final class Configuration {
         }
     }
 
-    private void executeEvent(DynamicHTMLExtractor wrapper, Configuration.Event event) throws InterruptedException, URISyntaxException, IOException, KeyManagementException {
+    private void executeEvent(DynamicHTMLExtractor wrapper, Configuration.Event event) throws InterruptedException, URISyntaxException, IOException, KeyManagementException, NoSuchAlgorithmException {
 
         ExtractionHandler extractionHandler = new ExtractionHandler();
 

@@ -19,6 +19,7 @@ import certh.iti.mklab.easie.configuration.Configuration.ScrapableField;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -28,11 +29,11 @@ import org.apache.commons.lang3.tuple.Pair;
  */
 public abstract class AbstractHTMLExtractor {
    
-   public abstract List extractFields(List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException;
+   public abstract List extractFields(List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
    
-   public abstract List extractTable(String tableSelector, List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException;
+   public abstract List extractTable(String tableSelector, List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
    
-   public abstract Pair extractFields(List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException;
+   public abstract Pair extractFields(List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
    
-   public abstract Pair extractTable(String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException;
+   public abstract Pair extractTable(String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
 }

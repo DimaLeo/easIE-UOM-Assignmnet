@@ -21,6 +21,7 @@ import certh.iti.mklab.easie.extractors.dynamicpages.DynamicHTMLExtractor;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -38,7 +39,7 @@ public class DynamicWrapperGenerator extends WrapperGenerator {
     }
 
     @Override
-    public void execute() throws InterruptedException, URISyntaxException, IOException, RelativeURLException, KeyManagementException {
+    public void execute() throws InterruptedException, URISyntaxException, IOException, RelativeURLException, KeyManagementException, NoSuchAlgorithmException {
 
         if (configuration.url.relative_url != null) {
             DynamicHTMLExtractor wrapper = new DynamicHTMLExtractor(
