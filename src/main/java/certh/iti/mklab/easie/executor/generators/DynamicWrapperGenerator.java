@@ -21,7 +21,6 @@ import certh.iti.mklab.easie.extractors.dynamicpages.DynamicHTMLExtractor;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -48,7 +47,7 @@ public class DynamicWrapperGenerator extends WrapperGenerator {
                     ChromeDriverPath
             );
             if (configuration.events != null) {
-                this.execute_events(wrapper);
+                configuration.executeEvents(wrapper);
             } else {
                 extraction_handler.execute(wrapper, configuration);
             }
@@ -68,7 +67,7 @@ public class DynamicWrapperGenerator extends WrapperGenerator {
                 );
 
                 if (configuration.events != null) {
-                    this.execute_events(wrapper);
+                    configuration.executeEvents(wrapper);
                 } else {
                     extraction_handler.execute(wrapper, configuration);
                 }
@@ -81,50 +80,5 @@ public class DynamicWrapperGenerator extends WrapperGenerator {
         }
     }
 
-    private void execute_events(DynamicHTMLExtractor wrapper) throws InterruptedException, URISyntaxException, IOException, KeyManagementException {
-        if (configuration.events instanceof ArrayList) {
-            ArrayList<Configuration.Event> list_of_events = (ArrayList<Configuration.Event>) configuration.events;
-            for (int i = 0; i < list_of_events.size(); i++) {
-                if (list_of_events.get(i).type.equals("CLICK")) {
-                    int times_to_repeat = list_of_events.get(i).times_to_repeat;
-                    for (int j = 0; j < times_to_repeat; j++) {
-                        wrapper.browser_emulator.clickEvent(list_of_events.get(i).selector);
-                    }
-                    extraction_handler.execute(wrapper, configuration);
-                } else if (list_of_events.get(i).type.equals("SCROLL_DOWN")) {
-                    int times_to_repeat = list_of_events.get(i).times_to_repeat;
-                    for (int j = 0; j < times_to_repeat; j++) {
-                        wrapper.browser_emulator.scrollDownEvent();
-                    }
-                    extraction_handler.execute(wrapper, configuration);
-                }
-            }
-        } else {
-            Configuration.Event event = (Configuration.Event) configuration.events;
-            System.out.println(event.extraction_type);
-            if (event.type.equals("CLICK")) {
-                if (event.extraction_type.equals("AFTER_ALL_EVENTS")) {
-                    for (int i = 0; i < event.times_to_repeat; i++) {
-                        wrapper.browser_emulator.clickEvent(event.selector);
-                    }
-                    extraction_handler.execute(wrapper, configuration);
-                } else {
-                    extraction_handler.execute(wrapper, configuration);
-                    for (int i = 0; i < event.times_to_repeat; i++) {
-                        wrapper.browser_emulator.clickEvent(event.selector);
-                        extraction_handler.execute(wrapper, configuration);
-                    }
 
-                }
-            } else {
-
-                if (event.times_to_repeat != null) {
-                    wrapper.browser_emulator.scrollDownEvent(event.times_to_repeat);
-                } else {
-                    wrapper.browser_emulator.scrollDownEvent();
-                }
-                extraction_handler.execute(wrapper, configuration);
-            }
-        }
-    }
 }

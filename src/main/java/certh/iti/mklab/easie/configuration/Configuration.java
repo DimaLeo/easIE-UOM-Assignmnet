@@ -15,7 +15,14 @@
  */
 package certh.iti.mklab.easie.configuration;
 
+import certh.iti.mklab.easie.executor.handlers.ExtractionHandler;
+import certh.iti.mklab.easie.extractors.dynamicpages.DynamicHTMLExtractor;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -48,6 +55,55 @@ public final class Configuration {
     public Store store;
 
     public Configuration crawl;
+
+
+    public void executeEvents(DynamicHTMLExtractor wrapper) throws InterruptedException, URISyntaxException, IOException, KeyManagementException {
+        List<Configuration.Event> events = this.events instanceof ArrayList ?
+                (ArrayList<Configuration.Event>) this.events : Collections.singletonList((Configuration.Event) this.events);
+
+        for (Configuration.Event event : events) {
+            int times_to_repeat = event.times_to_repeat != null ? event.times_to_repeat : 1;
+
+            if (event.type.equals("CLICK")) {
+                handleClickEvent(wrapper, event, times_to_repeat);
+            } else if (event.type.equals("SCROLL_DOWN")) {
+                handleScrollDownEvent(wrapper, times_to_repeat);
+            }
+        }
+    }
+
+    private void handleClickEvent(DynamicHTMLExtractor wrapper, Configuration.Event event, int times_to_repeat)
+            throws URISyntaxException, IOException, InterruptedException, KeyManagementException {
+
+        ExtractionHandler extractionHandler = new ExtractionHandler();
+
+        if (event.extraction_type.equals("AFTER_ALL_EVENTS")) {
+            performClickEvents(wrapper, event.selector, times_to_repeat);
+            extractionHandler.execute(wrapper, this);
+        } else {
+            extractionHandler.execute(wrapper, this);
+            performClickEvents(wrapper, event.selector, times_to_repeat);
+        }
+    }
+
+    private void handleScrollDownEvent(DynamicHTMLExtractor wrapper, int times_to_repeat)
+            throws InterruptedException, URISyntaxException, IOException, KeyManagementException {
+
+        ExtractionHandler extractionHandler = new ExtractionHandler();
+
+        if (times_to_repeat != 1) {
+            wrapper.setScrollEvent(times_to_repeat);
+        } else {
+            wrapper.setScrollEvent();
+        }
+        extractionHandler.execute(wrapper, this);
+    }
+
+    private void performClickEvents(DynamicHTMLExtractor wrapper, String selector, int times_to_repeat) throws InterruptedException {
+        for (int i = 0; i < times_to_repeat; i++) {
+            wrapper.setClickEvent(selector);
+        }
+    }
 
     public void setEvents(ArrayList<Event> events) {
         this.events = events;
