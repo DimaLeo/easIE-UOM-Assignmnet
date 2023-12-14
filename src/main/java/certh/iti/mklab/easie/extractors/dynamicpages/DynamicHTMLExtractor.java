@@ -142,6 +142,10 @@ public class DynamicHTMLExtractor extends AbstractHTMLExtractor {
         browser_emulator.clickEvent(eventSelector);
     }
 
+    public void setScrollEvent(Integer timesToRepeat) throws InterruptedException {
+        browser_emulator.scrollDownEvent(timesToRepeat);
+    }
+
     public void setScrollEvent() throws InterruptedException {
         browser_emulator.scrollDownEvent();
     }
