@@ -76,7 +76,7 @@ public class JSONConfigurationDeserializer implements JsonDeserializer<Configura
                     fields.get(i).setValue(valueValue);
                 }
 
-                if (!(citeyear instanceof Integer) && !(citeyear instanceof Double)) {
+                if (!(citeyear instanceof Integer) && !(citeyear instanceof Double) && citeyear != null) {
                     ExtractionProperties citeyearValue = transformExtractionProperties(citeyear);
                     fields.get(i).setCiteyear(citeyearValue);
                 }
