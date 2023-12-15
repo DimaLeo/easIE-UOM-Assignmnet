@@ -198,19 +198,6 @@ public class CompanySearcher {
     }
 
     /**
-     * Lowercases a set of String objects
-     *
-     * @param collection
-     * @returns the set of strings
-     */
-    public static ArrayList LowerCaseCollection(ArrayList<String> collection) {
-        for (int i = 0; i < collection.size(); i++) {
-            collection.set(i, collection.get(i).toLowerCase());
-        }
-        return collection;
-    }
-
-    /**
      * Get the domain name of a given url
      *
      * @param url
