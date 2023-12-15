@@ -85,7 +85,8 @@ public abstract class AbstractContentExtractor {
                 extractedContent.append("type", "textual").append("value", fieldValue);
                 break;
             case "numerical":
-                handleNumericalContent(extractedContent, fieldValue);
+                extractedContent.append("type", "numerical").append("value", handleNumericalContent(fieldValue));
+
                 break;
             case "boolean":
                 extractedContent.append("type", "boolean").append("value", getBooleanValue(fieldValue));
@@ -119,7 +120,9 @@ public abstract class AbstractContentExtractor {
         } else if (Boolean.FALSE.equals(getBooleanValue(fieldValue))) {
             extractedContent.append("type", "boolean").append("value", false);
         } else if (isNumericalValue(fieldValue)) {
-            handleNumericalContent(extractedContent, fieldValue);
+            Double value = handleNumericalContent(fieldValue);
+            extractedContent.append("value", value).append("type", "numerical");
+
         } else {
             extractedContent.append("type", "textual").append("value", fieldValue);
         }
@@ -141,13 +144,18 @@ public abstract class AbstractContentExtractor {
         return cleanedValue.equals("") && isNumeric(fieldValue.toString());
     }
 
-    private static void handleNumericalContent(Document extractedContent, Object fieldValue) {
+    private static Double handleNumericalContent(Object fieldValue) {
         try {
-            double numericalValue = Double.parseDouble(fieldValue.toString().replaceAll("[^0-9\\.]", "").trim());
-            extractedContent.append("value", numericalValue).append("type", "numerical");
+            Integer multiplier = 1;
+            if(fieldValue.toString().toLowerCase().contains("million")){
+                multiplier = 1000000;
+            }
+            if(fieldValue.toString().toLowerCase().contains("billion")){
+                multiplier = 1000000000;
+            }
+            return multiplier * Double.parseDouble(fieldValue.toString().replaceAll("[^0-9\\.]", "").trim());
         } catch (NumberFormatException nfe) {
-            // Handle the case where parsing to double fails
-            extractedContent.append("value", null).append("type", "numerical");
+            return null;
         }
     }
 

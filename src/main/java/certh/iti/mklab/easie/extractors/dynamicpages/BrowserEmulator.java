@@ -46,6 +46,7 @@ public class BrowserEmulator implements Fetcher {
     public BrowserEmulator(String fullURL, String pathToChromeDriver) throws InterruptedException {
         System.setProperty("webdriver.chrome.driver", pathToChromeDriver);
         driver = new ChromeDriver();
+
         driver.get(
                 fullURL
         );
