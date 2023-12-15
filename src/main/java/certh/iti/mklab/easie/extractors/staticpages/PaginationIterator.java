@@ -46,7 +46,7 @@ import org.jsoup.nodes.Document;
  *
  * @author vasgat
  */
-public class PaginationIterator extends AbstractHTMLExtractor {
+public class PaginationIterator implements AbstractHTMLExtractor {
 
     private Pagination pagination;
     private String base_url;

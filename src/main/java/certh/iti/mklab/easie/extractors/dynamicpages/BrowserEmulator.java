@@ -31,7 +31,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 /**
  * @author vasgat
  */
-public class BrowserEmulator extends Fetcher {
+public class BrowserEmulator implements Fetcher {
 
     public WebDriver driver;
 

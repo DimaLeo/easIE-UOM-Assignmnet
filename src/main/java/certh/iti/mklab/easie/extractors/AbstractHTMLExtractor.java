@@ -27,13 +27,13 @@ import org.apache.commons.lang3.tuple.Pair;
  * AbstractHTMLExtractor Object
  * @author vasgat
  */
-public abstract class AbstractHTMLExtractor {
+public interface AbstractHTMLExtractor {
    
-   public abstract List extractFields(List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
+   List extractFields(List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
    
-   public abstract List extractTable(String tableSelector, List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
+   List extractTable(String tableSelector, List<ScrapableField> fields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
    
-   public abstract Pair extractFields(List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
+   Pair extractFields(List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
    
-   public abstract Pair extractTable(String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
+   Pair extractTable(String tableSelector, List<ScrapableField> cfields, List<ScrapableField> sfields) throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException;
 }

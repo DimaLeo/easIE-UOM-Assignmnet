@@ -41,7 +41,7 @@ import org.jsoup.nodes.Element;
  *
  * @author vasgat
  */
-public class StaticHTMLExtractor extends AbstractHTMLExtractor {
+public class StaticHTMLExtractor implements AbstractHTMLExtractor {
 
     public String base_url;
     public String relative_url;
