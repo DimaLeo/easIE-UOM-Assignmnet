@@ -59,63 +59,45 @@ public class JSONConfigurationDeserializer implements JsonDeserializer<Configura
         return configuration;
     }
 
-    private ArrayList<ScrapableField> transform_metrics(ArrayList<ScrapableField> metrics) {
-        for (int i = 0; i < metrics.size(); i++) {
-            Object label = metrics.get(i).label;
-            Object value = metrics.get(i).value;
-            Object citeyear = metrics.get(i).citeyear;
-
-            if (!(label instanceof String)) {
-                ExtractionProperties label_value = new Gson().fromJson(
-                        (new JSONObject((LinkedTreeMap) label)).toString(),
-                        new TypeToken<ExtractionProperties>() {
-                }.getType());
-                metrics.get(i).setLabel(label_value);
-            }
-
-            if (!(value instanceof String)) {
-                ExtractionProperties value_value = new Gson().fromJson(
-                        (new JSONObject((LinkedTreeMap) value)).toString(),
-                        new TypeToken<ExtractionProperties>() {
-                }.getType());
-                metrics.get(i).setValue(value_value);
-            }
-
-            if (!(citeyear instanceof Integer) && !(citeyear instanceof Double)) {
-                ExtractionProperties citeyear_value = new Gson().fromJson(
-                        (new JSONObject((LinkedTreeMap) citeyear)).toString(),
-                        new TypeToken<ExtractionProperties>() {
-                }.getType());
-                metrics.get(i).setCiteyear(citeyear_value);
-            }
-        }
-        return metrics;
-    }
-
-    private ArrayList<ScrapableField> transform_CompanyInfo(ArrayList<ScrapableField> company_info) {
-        if (company_info != null) {
-
-            for (int i = 0; i < company_info.size(); i++) {
-                Object label = company_info.get(i).label;
-                Object value = company_info.get(i).value;
+    private ArrayList<ScrapableField> transformFields(ArrayList<ScrapableField> fields) {
+        if (fields != null) {
+            for (int i = 0; i < fields.size(); i++) {
+                Object label = fields.get(i).label;
+                Object value = fields.get(i).value;
+                Object citeyear = fields.get(i).citeyear;
 
                 if (!(label instanceof String)) {
-                    ExtractionProperties label_value = new Gson().fromJson(
-                            (new JSONObject((LinkedTreeMap) label)).toString(),
-                            new TypeToken<ExtractionProperties>() {
-                    }.getType());
-                    company_info.get(i).setLabel(label_value);
+                    ExtractionProperties labelValue = transformExtractionProperties(label);
+                    fields.get(i).setLabel(labelValue);
                 }
 
                 if (!(value instanceof String)) {
-                    ExtractionProperties value_value = new Gson().fromJson(
-                            (new JSONObject((LinkedTreeMap) value)).toString(),
-                            new TypeToken<ExtractionProperties>() {
-                    }.getType());
-                    company_info.get(i).setValue(value_value);
+                    ExtractionProperties valueValue = transformExtractionProperties(value);
+                    fields.get(i).setValue(valueValue);
+                }
+
+                if (!(citeyear instanceof Integer) && !(citeyear instanceof Double) && citeyear != null) {
+                    ExtractionProperties citeyearValue = transformExtractionProperties(citeyear);
+                    fields.get(i).setCiteyear(citeyearValue);
                 }
             }
         }
-        return company_info;
+        return fields;
+    }
+
+    private ExtractionProperties transformExtractionProperties(Object object) {
+        return new Gson().fromJson(
+                (new JSONObject((LinkedTreeMap) object)).toString(),
+                new TypeToken<ExtractionProperties>() {
+                }.getType()
+        );
+    }
+
+    private ArrayList<ScrapableField> transform_metrics(ArrayList<ScrapableField> metrics) {
+        return transformFields(metrics);
+    }
+
+    private ArrayList<ScrapableField> transform_CompanyInfo(ArrayList<ScrapableField> companyInfo) {
+        return transformFields(companyInfo);
     }
 }

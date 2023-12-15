@@ -90,54 +90,43 @@ public class BrowserEmulator extends Fetcher {
      * @throws InterruptedException
      */
     public void scrollDownEvent(int timesToRepeat) throws InterruptedException {
-        Random rand = new Random();
-        String currentDoc = "";
-        for (int i = 0; i < timesToRepeat; i++) {
-            currentDoc = driver.getPageSource();
-            int counter = 0;
-            while (((Document) this.getHTMLDocument()).select("._hnn7m").size() > 0 && counter <= 600000) {
-                Thread.sleep(2000);
-                counter += 2000;
-            }
-            if (counter > 600000) {
-                break;
-            }
-            JavascriptExecutor jse = (JavascriptExecutor) driver;
-            jse.executeScript("window.scrollBy(0," + (300 + rand.nextInt(312)) + ")", "");
-            int sleep_time = rand.nextInt(3000);
-            Thread.sleep(2142 + sleep_time);
-
-            /*if (currentDoc.equals(driver.getPageSource())){
-                jse.executeScript("scroll(0, -25);");
-                Thread.sleep(1968+rand.nextInt(12365));
-                jse.executeScript("scroll(0, 250);");
-            }*/
-        }
+        scrollEvent(timesToRepeat, 300);
     }
 
     public void scrollUpEvent(int timesToRepeat) throws InterruptedException {
+        scrollEvent(timesToRepeat, -300);
+    }
+
+    private void scrollEvent(int timesToRepeat, int scrollAmount) throws InterruptedException {
         Random rand = new Random();
         String currentDoc = "";
+
         for (int i = 0; i < timesToRepeat; i++) {
             currentDoc = driver.getPageSource();
             int counter = 0;
+
             while (((Document) this.getHTMLDocument()).select("._hnn7m").size() > 0 && counter <= 600000) {
                 Thread.sleep(2000);
                 counter = 2000;
             }
+
             if (counter > 600000) {
                 break;
             }
-            JavascriptExecutor jse = (JavascriptExecutor) driver;
-            jse.executeScript("window.scrollBy(0," + (-300 - rand.nextInt(312)) + ")", "");
-            int sleep_time = rand.nextInt(3000);
-            Thread.sleep(2142 + sleep_time);
 
-            /*if (currentDoc.equals(driver.getPageSource())){
-                jse.executeScript("scroll(0, -25);");
-                Thread.sleep(1968+rand.nextInt(12365));
-                jse.executeScript("scroll(0, 250);");
-            }*/
+            JavascriptExecutor jse = (JavascriptExecutor) driver;
+            jse.executeScript("window.scrollBy(0," + scrollAmount + ")", "");
+
+            int sleepTime = rand.nextInt(3000);
+            Thread.sleep(2142 + sleepTime);
+            // Additional logic for handling potential page freeze
+        /*
+        if (currentDoc.equals(driver.getPageSource())){
+            jse.executeScript("scroll(0, -25);");
+            Thread.sleep(1968+rand.nextInt(12365));
+            jse.executeScript("scroll(0, 250);");
+        }
+        */
         }
     }
 

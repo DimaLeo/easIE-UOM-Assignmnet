@@ -15,6 +15,7 @@
  */
 package certh.iti.mklab.easie.executor.handlers;
 
+import certh.iti.mklab.easie.configuration.Configuration;
 import com.mongodb.MongoClient;
 import certh.iti.mklab.easie.MongoUtils;
 import certh.iti.mklab.easie.configuration.Configuration.Store;
@@ -66,52 +67,52 @@ public class DataHandler {
      * @throws FileNotFoundException
      * @throws Exception
      */
-    public void store(Store store, String source_name) throws UnknownHostException, FileNotFoundException, IOException {
-
+    public void store(Store store, String sourceName) throws UnknownHostException, FileNotFoundException, IOException {
         if (store.companies_collection != null && extracted_company_info != null) {
-            MongoClient client;
-            if (store.db_credentials != null) {
-                client = MongoUtils.newClient(
-                        store.db_credentials.server_address,
-                        store.db_credentials.username,
-                        store.db_credentials.password,
-                        store.db_credentials.db
-                );
-            } else {
-                client = MongoUtils.newClient();
-            }
-
-            MongoCollection companies_collection = MongoUtils.connect(client, store.database, store.companies_collection);
-            MongoCollection metrics_collection = MongoUtils.connect(client, store.database, store.metrics_collection);
-
-            storeUtils.toMongoDB(companies_collection, metrics_collection, source_name);
-
-            client.close();
-
+            storeCompaniesAndMetrics(store, sourceName);
         } else if (store.companies_collection == null && store.metrics_collection != null) {
-            MongoClient client;
-
-            if (store.db_credentials != null) {
-                client = MongoUtils.newClient(
-                        store.db_credentials.server_address,
-                        store.db_credentials.username,
-                        store.db_credentials.password,
-                        store.db_credentials.db
-                );
-            } else {
-                client = MongoUtils.newClient();
-            }
-
-            MongoCollection metrics_collection = MongoUtils.connect(client, store.database, store.metrics_collection);
-
-            storeUtils.toMongoDB(metrics_collection);
-
-            client.close();
-        } else if (store.format.equals("json")) {
+            storeMetrics(store);
+        } else if ("json".equals(store.format)) {
             storeUtils.toJSONFile(store.hd_path);
         } else {
             storeUtils.toCSVFile(store.hd_path, store.wikirate_metric_designer);
         }
+    }
+
+    private void storeCompaniesAndMetrics(Store store, String sourceName) throws IOException {
+        MongoClient client = createMongoClient(store.db_credentials);
+        MongoCollection companiesCollection = connectToMongo(client, store.database, store.companies_collection);
+        MongoCollection metricsCollection = connectToMongo(client, store.database, store.metrics_collection);
+
+        storeUtils.toMongoDB(companiesCollection, metricsCollection, sourceName);
+
+        client.close();
+    }
+
+    private void storeMetrics(Store store) throws UnknownHostException {
+        MongoClient client = createMongoClient(store.db_credentials);
+        MongoCollection metricsCollection = connectToMongo(client, store.database, store.metrics_collection);
+
+        storeUtils.toMongoDB(metricsCollection);
+
+        client.close();
+    }
+
+    private MongoClient createMongoClient(Configuration.DBCreadentials credentials) {
+        if (credentials != null) {
+            return MongoUtils.newClient(
+                    credentials.server_address,
+                    credentials.username,
+                    credentials.password,
+                    credentials.db
+            );
+        } else {
+            return MongoUtils.newClient();
+        }
+    }
+
+    private MongoCollection connectToMongo(MongoClient client, String database, String collection) {
+        return MongoUtils.connect(client, database, collection);
     }
 
     public String exportJson() {
