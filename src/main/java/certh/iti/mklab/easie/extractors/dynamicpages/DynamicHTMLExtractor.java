@@ -37,7 +37,7 @@ import org.jsoup.nodes.Element;
  *
  * @author vasgat
  */
-public class DynamicHTMLExtractor extends AbstractHTMLExtractor {
+public class DynamicHTMLExtractor implements AbstractHTMLExtractor {
 
     public String base_url;
     public String source;

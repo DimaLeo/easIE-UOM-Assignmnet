@@ -45,7 +45,7 @@ import javax.net.ssl.X509TrustManager;
 /**
  * @author vasgat
  */
-public class StaticHTMLFetcher extends Fetcher {
+public class StaticHTMLFetcher implements Fetcher {
 
     private Document document;
     private int responseCode;

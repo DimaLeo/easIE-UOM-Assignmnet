@@ -42,7 +42,7 @@ import org.bson.Document;
  *
  * @author vasgat
  */
-public class GroupHTMLExtractor extends AbstractHTMLExtractor {
+public class GroupHTMLExtractor implements AbstractHTMLExtractor {
 
     private HashSet<String> group_of_urls;
     private String base_url;

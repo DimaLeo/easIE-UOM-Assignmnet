@@ -21,7 +21,7 @@ import org.jsoup.nodes.Document;
  *
  * @author vasgat
  */
-public abstract class Fetcher {
+public interface Fetcher {
 
     public abstract Document getHTMLDocument();
 

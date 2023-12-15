@@ -31,7 +31,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 /**
  * @author vasgat
  */
-public class BrowserEmulator extends Fetcher {
+public class BrowserEmulator implements Fetcher {
 
     public WebDriver driver;
 
@@ -46,6 +46,7 @@ public class BrowserEmulator extends Fetcher {
     public BrowserEmulator(String fullURL, String pathToChromeDriver) throws InterruptedException {
         System.setProperty("webdriver.chrome.driver", pathToChromeDriver);
         driver = new ChromeDriver();
+
         driver.get(
                 fullURL
         );

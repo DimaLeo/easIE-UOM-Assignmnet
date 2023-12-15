@@ -21,6 +21,7 @@ import certh.iti.mklab.easie.extractors.dynamicpages.DynamicHTMLExtractor;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -56,8 +57,7 @@ public final class Configuration {
 
     public Configuration crawl;
 
-
-    public void executeEvents(DynamicHTMLExtractor wrapper) throws InterruptedException, URISyntaxException, IOException, KeyManagementException {
+    public void executeEvents(DynamicHTMLExtractor wrapper) throws InterruptedException, URISyntaxException, IOException, KeyManagementException, NoSuchAlgorithmException {
         List<Configuration.Event> events = this.events instanceof ArrayList ?
                 (ArrayList<Configuration.Event>) this.events : Collections.singletonList((Configuration.Event) this.events);
 
@@ -73,7 +73,7 @@ public final class Configuration {
     }
 
     private void handleClickEvent(DynamicHTMLExtractor wrapper, Configuration.Event event, int times_to_repeat)
-            throws URISyntaxException, IOException, InterruptedException, KeyManagementException {
+            throws URISyntaxException, IOException, InterruptedException, KeyManagementException, NoSuchAlgorithmException {
 
         ExtractionHandler extractionHandler = new ExtractionHandler();
 
@@ -87,7 +87,7 @@ public final class Configuration {
     }
 
     private void handleScrollDownEvent(DynamicHTMLExtractor wrapper, int times_to_repeat)
-            throws InterruptedException, URISyntaxException, IOException, KeyManagementException {
+            throws InterruptedException, URISyntaxException, IOException, KeyManagementException, NoSuchAlgorithmException {
 
         ExtractionHandler extractionHandler = new ExtractionHandler();
 
@@ -104,6 +104,7 @@ public final class Configuration {
             wrapper.setClickEvent(selector);
         }
     }
+
 
     public void setEvents(ArrayList<Event> events) {
         this.events = events;
